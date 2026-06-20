@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Effector</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #131211;
+    --paper: #efe9dc;
+    --panel: #1c1b19;
+    --panel-top: #1c1b19;
+    --panel2: #242220;
+    --inset: #0a0a09;
+    --line: #000;
+    --line-lo: #2f2d29;
+    --text: #efe9dc;
+    --text-dim: #b8b1a0;
+    --text-dimmer: #6f6a5e;
+    --accent: #7c8c50;
+    --good: #7c8c50;
+    --warn: #ff5d4a;
+
+    --c-comp: #f2c14e;
+    --c-drive: #ff5d4a;
+    --c-chorus: #b98bff;
+    --c-flanger: #ff6fae;
+    --c-phaser: #6fa8ff;
+    --c-tremolo: #9bb06e;
+    --c-delay: #ffa64a;
+    --c-reverb: #4ad6c8;
+    --c-gate: #cfc8b8;
+    --c-crush: #ff3b3b;
+    --c-filter: #c4d92e;
+    --c-pitch: #e63bb0;
+    --c-eq: #7c8c50;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:'Space Grotesk', sans-serif; overflow:hidden; user-select:none;
+    font-size:12.5px;
+  }
+  .app{height:100%; display:flex; flex-direction:column; background:var(--bg);}
+
+  .titlebar{
+    height:54px; flex:0 0 auto; display:flex; align-items:center; gap:14px;
+    padding:0 16px; background:var(--accent);
+    border-bottom:3px solid #000;
+    position:relative; z-index:5;
+    background-image:repeating-linear-gradient(135deg, rgba(0,0,0,.06) 0 2px, transparent 2px 14px);
+  }
+  .tb-dots{display:none;}
+  .tb-sep{width:3px; height:26px; background:#000;}
+  .power-toggle{
+    display:flex; align-items:center; gap:8px;
+    background:#0e0d0c; color:var(--paper);
+    border:2px solid #000;
+    border-radius:0; padding:7px 14px;
+    cursor:pointer; font-weight:700; font-size:11.5px;
+    letter-spacing:.5px; font-family:'Space Grotesk';
+    box-shadow:3px 3px 0 #000;
+  }
+  .power-toggle:hover{transform:translate(1px,1px); box-shadow:2px 2px 0 #000;}
+  .power-toggle.on{ background:#101810; color:var(--good); border-color:#000; }
+  .mb-btn{
+    display:flex; align-items:center; gap:6px; background:#0e0d0c; color:var(--paper);
+    border:2px solid #000; border-radius:0; padding:7px 12px; cursor:pointer; font-weight:700;
+    font-size:11px; letter-spacing:.3px; font-family:'Space Grotesk'; box-shadow:3px 3px 0 #000;
+  }
+  .mb-btn:hover{transform:translate(1px,1px); box-shadow:2px 2px 0 #000;}
+  .mb-btn.active{background:#3a1818; color:#ffb3a8; border-color:#000;}
+  .ab-group{display:flex; gap:0; border:2px solid #000; box-shadow:3px 3px 0 #000;}
+  .ab-btn{
+    background:#0e0d0c; color:var(--paper); border:none; padding:7px 13px; cursor:pointer;
+    font-weight:700; font-size:11.5px; font-family:'Anton'; letter-spacing:.5px;
+    border-right:2px solid #000;
+  }
+  .ab-btn:last-child{border-right:none;}
+  .ab-btn.active{background:var(--good); color:#000;}
+  .clip-dot{
+    width:10px; height:10px; border-radius:50%; background:#3a1818; border:1px solid #000;
+    transition:background .05s;
+  }
+  .clip-dot.hit{background:#ff2d2d; box-shadow:0 0 8px 2px rgba(255,45,45,.9);}
+  .led{width:8px; height:8px; border-radius:50%; background:#3a1f16; border:1px solid #000;}
+  .led.on{background:var(--good); box-shadow:0 0 6px 1px var(--good);}
+  .tb-status{font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#000; font-weight:700; letter-spacing:.4px;}
+  .tb-spacer{flex:1;}
+  .tb-brand{
+    font-family:'Anton'; font-size:22px; letter-spacing:1px; color:#0e0d0c; text-transform:uppercase;
+    -webkit-text-stroke:0; margin-right:4px;
+  }
+  .tb-meta{display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:10px; color:#0e0d0c; letter-spacing:.3px; font-weight:700;}
+  .tb-meta span{padding:3px 9px; background:#0e0d0c; color:var(--accent); border-radius:0; border:1px solid #000;}
+
+  .main{flex:1; display:flex; min-height:0;}
+  .center{flex:1; display:flex; flex-direction:column; min-width:0; padding:14px; gap:12px;}
+  .sidebar{
+    width:248px; flex:0 0 auto; border-left:3px solid #000;
+    background:var(--panel);
+    padding:14px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;
+  }
+
+  .card{
+    background:var(--panel); border:2px solid #000; border-radius:0; padding:11px 13px 9px; flex:0 0 auto;
+    box-shadow:4px 4px 0 #000;
+  }
+  .card-bar{display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;}
+  .card-bar .ttl{font-family:'Anton'; font-size:13px; font-weight:400; letter-spacing:.6px; color:var(--text); text-transform:uppercase; display:flex; align-items:center; gap:7px;}
+  .card-bar .ttl .swatch{width:10px; height:10px; border-radius:0; background:var(--c-eq); border:1px solid #000;}
+  .seg-toggle{ display:flex; background:var(--inset); border-radius:0; padding:0; gap:0; border:2px solid #000; }
+  .seg-toggle button{ border:none; background:transparent; color:var(--text-dimmer); font-size:10.5px; font-weight:700; padding:5px 12px; border-radius:0; cursor:pointer; font-family:'Space Grotesk'; letter-spacing:.3px; }
+  .seg-toggle button.active{background:var(--accent); color:#000;}
+  canvas#scope{ width:100%; height:108px; display:block; border-radius:0; background:#08090a; border:1px solid #000; }
+  canvas#eqCanvas{ width:100%; height:128px; display:block; border-radius:0; background:#08090a; border:1px solid #000; cursor:crosshair; }
+  .eq-foot{display:flex; justify-content:space-between; align-items:center; margin-top:7px;}
+  .eq-foot .hint{font-family:'JetBrains Mono'; font-size:9.5px; color:var(--text-dimmer);}
+  .mini-btn{
+    font-family:'Space Grotesk'; font-size:10.5px; font-weight:700; color:#000;
+    background:var(--accent); border:2px solid #000;
+    border-radius:0; padding:5px 11px; cursor:pointer;
+    box-shadow:2px 2px 0 #000;
+  }
+  .mini-btn:hover{transform:translate(1px,1px); box-shadow:1px 1px 0 #000;}
+
+  .board{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:9px; padding-right:3px;}
+  .board::-webkit-scrollbar{width:5px;}
+  .board::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+
+  .pedal{
+    background:var(--fx-color, var(--accent));
+    border:2px solid #000;
+    border-radius:0; padding:11px 16px 11px 20px;
+    display:flex; align-items:center; gap:18px; transition:opacity .15s, filter .15s;
+    position:relative; overflow:hidden;
+    box-shadow:4px 4px 0 #000;
+    color:#000;
+  }
+  .pedal::after{
+    content: attr(data-num); position:absolute; right:6px; top:-22px;
+    font-family:'Anton'; font-size:80px; color:#000; opacity:.1;
+    line-height:1; pointer-events:none;
+  }
+  .pedal.bypassed{opacity:.34; filter:saturate(.4);}
+
+  .pedal-name{ width:108px; flex:0 0 auto; font-weight:700; font-size:13px; color:#000; display:flex; flex-direction:column; gap:3px; }
+  .pedal-name .tag{
+    font-family:'JetBrains Mono'; font-size:8.5px; font-weight:700; letter-spacing:1px;
+    color:var(--fx-color, var(--accent)); background:#000; text-transform:uppercase;
+    display:inline-block; padding:1px 5px; width:fit-content;
+  }
+  .pedal-name .row1{display:flex; align-items:center; gap:6px; font-family:'Anton'; letter-spacing:.3px; text-transform:uppercase; font-size:14px;}
+  .pedal-key{
+    font-family:'JetBrains Mono'; font-size:9px; font-weight:700; color:var(--fx-color, var(--accent));
+    background:#000; border:1px solid #000; border-radius:0;
+    width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  }
+  .pedal-controls{flex:1; display:flex; gap:20px; flex-wrap:wrap;}
+
+  .knob-wrap{display:flex; flex-direction:column; align-items:center; gap:5px; width:50px;}
+  .knob-ring{
+    width:40px; height:40px; border-radius:50%; position:relative; cursor:grab;
+    background: conic-gradient(from -135deg, #000 calc(var(--pct,0)*270deg), rgba(255,255,255,.55) 0deg);
+    padding:3px; border:1px solid #000;
+  }
+  .knob-ring:active{cursor:grabbing;}
+  .knob-cap{
+    width:100%; height:100%; border-radius:50%;
+    background: #fff;
+    border:1px solid #000;
+    position:relative;
+  }
+  .knob-cap::after{
+    content:""; position:absolute; top:4px; left:50%; width:2px; height:10px;
+    background:#000;
+    transform-origin:50% 15px; transform:translateX(-50%) rotate(var(--rot,0deg)); border-radius:0;
+  }
+  .knob-label{font-size:8.5px; color:rgba(0,0,0,.6); font-weight:600; letter-spacing:.2px; text-transform:uppercase;}
+  .knob-val{ font-family:'JetBrains Mono'; font-size:8.5px; color:var(--fx-color, var(--accent)); background:#000; padding:1px 5px; border:1px solid #000; min-width:32px; text-align:center; font-weight:700; }
+
+  .bypass-btn{
+    flex:0 0 auto; width:28px; height:28px; border-radius:0;
+    background:#fff; border:2px solid #000;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .bypass-btn .dot{width:8px; height:8px; border-radius:50%; background:rgba(0,0,0,.18);}
+  .pedal:not(.bypassed) .bypass-btn .dot{background:#000;}
+
+  .order-btns{display:flex; flex-direction:column; gap:3px;}
+  .order-btns button{ width:16px; height:13px; background:#fff; border:1px solid #000; color:#000; font-size:7px; cursor:pointer; border-radius:0; line-height:1; padding:0; }
+  .order-btns button:hover{background:#000; color:var(--fx-color, var(--accent));}
+  .drag-handle{
+    flex:0 0 auto; cursor:grab; color:rgba(0,0,0,.45); font-size:16px; letter-spacing:-2px;
+    padding:0 2px; user-select:none; line-height:1;
+  }
+  .drag-handle:active{cursor:grabbing;}
+  .pedal.dragging{opacity:.3;}
+  .pedal.drag-over{outline:2px dashed #000; outline-offset:-2px;}
+
+  .remove-btn{
+    flex:0 0 auto; width:22px; height:22px; border-radius:0; background:transparent;
+    border:1px solid transparent; color:rgba(0,0,0,.5); cursor:pointer; font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .remove-btn:hover{color:#fff; border-color:#000; background:#000;}
+
+  .add-bar{flex:0 0 auto; position:relative;}
+  .add-btn{
+    width:100%; padding:10px; border-radius:0; border:2px dashed var(--text-dimmer); background:transparent;
+    color:var(--text-dim); font-size:11.5px; font-weight:700; cursor:pointer; letter-spacing:.3px;
+    font-family:'Space Grotesk';
+  }
+  .add-btn:hover{color:var(--accent); border-color:var(--accent);}
+  .add-menu{
+    position:absolute; bottom:calc(100% + 6px); left:0; right:0; z-index:10;
+    background:var(--panel); border:2px solid #000; border-radius:0;
+    padding:4px; display:none; flex-direction:column; gap:2px;
+    box-shadow:4px 4px 0 #000;
+    max-height:260px; overflow-y:auto;
+  }
+  .add-menu.open{display:flex;}
+  .add-menu button{
+    display:flex; align-items:center; gap:8px; text-align:left; background:transparent; border:none;
+    color:var(--text); font-size:12px; padding:8px 9px; border-radius:0; cursor:pointer; font-weight:600;
+    font-family:'Space Grotesk';
+  }
+  .add-menu button:hover{background:var(--accent); color:#000;}
+  .add-menu .sw{width:9px; height:9px; border-radius:0; flex:0 0 auto; border:1px solid #000;}
+  .add-menu .desc{color:var(--text-dimmer); font-size:9.5px; font-weight:400; margin-left:auto;}
+  .add-menu button:hover .desc{color:#000;}
+
+  .side-title{ font-family:'Anton'; font-size:13px; font-weight:400; letter-spacing:.6px; color:var(--text); text-transform:uppercase; margin-bottom:9px; display:flex; align-items:center; gap:6px; }
+  .side-title::after{content:""; flex:1; height:2px; background:#000;}
+  .field{margin-bottom:9px;}
+  .field label{display:block; font-size:10px; color:var(--text-dim); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.3px;}
+  select, input[type=range]{width:100%;}
+  select{ background:var(--inset); color:var(--text); border:2px solid #000; border-radius:0; padding:7px 8px; font-family:'Space Grotesk'; font-size:11.5px; font-weight:600; }
+  input[type=range]{ -webkit-appearance:none; height:5px; background:var(--inset); border-radius:0; border:1px solid #000; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:0; background:var(--accent); border:2px solid #000; }
+
+  .level-row{display:flex; align-items:center; gap:8px; margin-top:7px;}
+  .level-label{font-family:'JetBrains Mono'; font-size:8.5px; color:var(--text-dimmer); width:18px; font-weight:700;}
+  .level-track{ flex:1; height:8px; background:var(--inset); border-radius:0; overflow:hidden; position:relative; border:1px solid #000; }
+  .level-fill{height:100%; width:0%; background:linear-gradient(90deg,#7c8c50 0%,#7c8c50 60%,#9bb06e 82%,#ff5d4a 96%); transition:width .04s;}
+  .level-track::after{ content:""; position:absolute; inset:0; pointer-events:none; background-image:repeating-linear-gradient(90deg, var(--inset) 0 1px, transparent 1px 5px); }
+
+  .preset-list{display:flex; flex-direction:column; gap:5px;}
+  .preset-btn{
+    text-align:left; background:var(--panel2); border:2px solid #000;
+    border-radius:0; padding:8px 11px; color:var(--text-dim); font-size:11.5px; cursor:pointer; font-weight:700;
+    display:flex; align-items:center; gap:8px; position:relative;
+    font-family:'Space Grotesk';
+  }
+  .preset-btn:hover{background:var(--accent); color:#000;}
+  .preset-btn.active{ background:#101810; color:var(--good); border-color:var(--good); }
+  .preset-btn .key{
+    font-family:'JetBrains Mono'; font-size:9px; color:#000; background:var(--text);
+    border:1px solid #000; border-radius:0; width:16px; height:16px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-weight:700;
+  }
+  .preset-btn.active .key{color:var(--good); background:#000; border-color:var(--good);}
+  .preset-btn .plabel{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .preset-btn .pdel{
+    flex:0 0 auto; color:var(--text-dimmer); font-size:12px; opacity:0; transition:opacity .1s; padding:0 2px;
+  }
+  .preset-btn:hover .pdel{opacity:1; color:#000;}
+  .preset-btn .pdel:hover{color:var(--warn);}
+  .save-preset-btn{
+    width:100%; padding:9px; border-radius:0; border:2px dashed var(--text-dimmer); background:transparent;
+    color:var(--text-dim); font-size:11px; font-weight:700; cursor:pointer; margin-top:4px;
+    font-family:'Space Grotesk';
+  }
+  .save-preset-btn:hover{color:var(--accent); border-color:var(--accent);}
+
+  .note{font-size:10px; color:var(--text-dimmer); line-height:1.7; padding-top:2px;}
+  ::-webkit-scrollbar{width:6px; height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  /* ===== 帯域インジケーター ===== */
+  .band-meter{display:flex; gap:8px; margin-top:8px;}
+  .band-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .band-track{ width:100%; height:38px; background:var(--inset); border:1px solid #000; position:relative; overflow:hidden; }
+  .band-fill{ position:absolute; bottom:0; left:0; right:0; height:0%; background:var(--text-dimmer); transition:height .06s; }
+  .band-col.dominant .band-fill{ background:var(--accent); }
+  .band-name{ font-family:'JetBrains Mono'; font-size:8.5px; color:var(--text-dimmer); font-weight:700; letter-spacing:.5px; }
+  .band-col.dominant .band-name{ color:var(--accent); }
+
+  /* ===== チューナー ===== */
+  .tuner-display{ display:none; flex-direction:column; align-items:center; justify-content:center; height:108px; background:#08090a; border:1px solid #000; }
+  .tuner-display.active{ display:flex; }
+  .tuner-note{ font-family:'Anton'; font-size:46px; color:var(--text-dimmer); letter-spacing:1px; }
+  .tuner-note.intune{ color:var(--good); }
+  .tuner-cents{ font-family:'JetBrains Mono'; font-size:11px; color:var(--text-dimmer); margin-top:2px; }
+  .tuner-bar{ width:70%; height:5px; background:var(--panel2); border:1px solid #000; margin-top:8px; position:relative; }
+  .tuner-bar::before{ content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--text-dimmer); }
+  .tuner-needle{ position:absolute; top:0; bottom:0; width:3px; background:var(--accent); left:50%; transform:translateX(-50%); transition:left .08s; }
+
+  .dup-btn{
+    flex:0 0 auto; width:22px; height:22px; border-radius:0; background:transparent;
+    border:1px solid transparent; color:rgba(0,0,0,.5); cursor:pointer; font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dup-btn:hover{color:#000; background:rgba(255,255,255,.4);}
+
+  .io-row{display:flex; gap:6px;}
+  .io-row .mini-btn{flex:1; text-align:center;}
+  .tap-btn{
+    width:100%; padding:11px; border-radius:0; border:2px solid #000; background:var(--panel2);
+    color:var(--text); font-size:13px; font-weight:700; cursor:pointer; font-family:'Anton'; letter-spacing:1px;
+    box-shadow:2px 2px 0 #000;
+  }
+  .tap-btn:active{transform:translate(1px,1px); box-shadow:1px 1px 0 #000;}
+  .bpm-readout{ font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-dim); text-align:center; margin-top:6px; }
+
+  /* ===== フットスイッチバー ===== */
+  .footbar{
+    flex:0 0 auto; display:flex; gap:8px; padding:10px 14px;
+    background:var(--accent); border-top:3px solid #000;
+    overflow-x:auto;
+  }
+  .footbar::-webkit-scrollbar{height:5px;}
+  .footswitch{
+    flex:1 1 0; min-width:84px; max-width:160px;
+    background:var(--panel2); border:2px solid #000; border-radius:0; padding:10px 8px 12px;
+    cursor:pointer; position:relative;
+    box-shadow:3px 3px 0 #000;
+    display:flex; flex-direction:column; align-items:center; gap:7px;
+    transition:transform .05s;
+  }
+  .footswitch:active{transform:translate(2px,2px); box-shadow:1px 1px 0 #000;}
+  .footswitch .fnum{ font-family:'JetBrains Mono'; font-size:9px; color:var(--text-dimmer); position:absolute; top:6px; left:8px; font-weight:700; }
+  .footswitch .fcap{ width:28px; height:28px; border-radius:50%; background:var(--inset); border:2px solid #000; margin-top:4px; }
+  .footswitch .flabel{
+    font-family:'Anton'; font-size:11px; font-weight:400; color:var(--text-dim); text-align:center; text-transform:uppercase;
+    line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%;
+  }
+  .footswitch.active{ border-color:var(--good); box-shadow:3px 3px 0 var(--good); }
+  .footswitch.active .fcap{ background:var(--good); }
+  .footswitch.active .flabel{color:var(--good);}
+  .footswitch.empty{ opacity:.3; cursor:default; border-style:dashed; background:transparent; box-shadow:none; }
+  .footswitch.empty:active{transform:none;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="titlebar">
+    <button class="power-toggle" id="powerBtn"><span class="led" id="powerLed"></span><span id="powerLabel">起動</span></button>
+    <button class="mb-btn" id="bypassAllBtn">全バイパス</button>
+    <div class="ab-group">
+      <button class="ab-btn active" id="chBtnA">A</button>
+      <button class="ab-btn" id="chBtnB">B</button>
+    </div>
+    <div class="tb-status" id="statusLine">停止中</div>
+    <div class="tb-spacer"></div>
+    <span class="clip-dot" id="clipDot" title="クリップ警告"></span>
+    <div class="tb-meta"><span id="srInfo">— Hz</span><span id="latInfo">遅延 — ms</span></div>
+  </div>
+
+  <div class="main">
+    <div class="center">
+      <div class="card">
+        <div class="card-bar">
+          <div class="seg-toggle">
+            <button class="active" data-mode="wave">波形</button>
+            <button data-mode="freq">周波数</button>
+            <button data-mode="tuner">チューナー</button>
+          </div>
+          <div style="font-family:'JetBrains Mono'; font-size:10px; color:var(--text-dimmer);" id="freqInfo"></div>
+        </div>
+        <canvas id="scope" width="900" height="108"></canvas>
+        <div class="tuner-display" id="tunerDisplay">
+          <div class="tuner-note" id="tunerNote">—</div>
+          <div class="tuner-cents" id="tunerCents">弦/鍵盤を鳴らしてください</div>
+          <div class="tuner-bar"><div class="tuner-needle" id="tunerNeedle" style="left:50%"></div></div>
+        </div>
+        <div class="band-meter">
+          <div class="band-col" id="bandLow"><div class="band-track"><div class="band-fill" id="bandLowFill"></div></div><div class="band-name">LOW</div></div>
+          <div class="band-col" id="bandMid"><div class="band-track"><div class="band-fill" id="bandMidFill"></div></div><div class="band-name">MID</div></div>
+          <div class="band-col" id="bandHigh"><div class="band-track"><div class="band-fill" id="bandHighFill"></div></div><div class="band-name">HIGH</div></div>
+        </div>
+      </div>
+
+      <div class="board" id="pedalboard"></div>
+
+      <div class="add-bar">
+        <div class="add-menu" id="addMenu"></div>
+        <button class="add-btn" id="addBtn">＋ エフェクトを追加</button>
+      </div>
+
+      <div class="card" style="flex:0 0 auto;">
+        <div class="card-bar">
+          <div class="ttl"><span class="swatch"></span>EQ — 信号チェーン最終段（常設）</div>
+          <button class="mini-btn" id="eqReset">フラットに戻す</button>
+        </div>
+        <canvas id="eqCanvas" width="900" height="128"></canvas>
+        <div class="eq-foot">
+          <div class="hint">点をドラッグして周波数特性を直接編集できます</div>
+          <div class="hint" id="eqReadout"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div>
+        <div class="side-title">入力</div>
+        <div class="field">
+          <label>入力ソース</label>
+          <select id="inputSource">
+            <option value="mic">マイク / オーディオI/F</option>
+            <option value="tab">タブ・画面の音声</option>
+          </select>
+        </div>
+        <div class="field" id="deviceField"><label>デバイス</label><select id="deviceSelect"><option>許可待ち...</option></select></div>
+        <div class="field">
+          <label>モード</label>
+          <select id="instMode">
+            <option value="guitar">エレキギター</option>
+            <option value="keys">キーボード / シンセ</option>
+            <option value="acoustic">アコースティック（マイク）</option>
+          </select>
+        </div>
+        <div class="field"><label>入力トリム</label><input type="range" id="inputTrimSlider" min="0" max="200" value="100"></div>
+        <div class="level-row"><span class="level-label">IN</span><div class="level-track"><div class="level-fill" id="inputBar"></div></div></div>
+      </div>
+
+      <div>
+        <div class="side-title">出力</div>
+        <div class="level-row"><span class="level-label">L</span><div class="level-track"><div class="level-fill" id="vuL"></div></div></div>
+        <div class="level-row"><span class="level-label">R</span><div class="level-track"><div class="level-fill" id="vuR"></div></div></div>
+        <div class="field" style="margin-top:8px;"><label>マスターボリューム</label><input type="range" id="masterVol" min="0" max="100" value="80"></div>
+        <div class="note" style="margin-top:2px;">出力段にリミッターを常時適用（音割れ防止）</div>
+      </div>
+
+      <div>
+        <div class="side-title">タップテンポ</div>
+        <button class="tap-btn" id="tapBtn">TAP</button>
+        <div class="bpm-readout" id="bpmReadout">BPM: —（ディレイ/トレモロに反映）</div>
+      </div>
+
+      <div>
+        <div class="side-title">プリセット <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-dimmer); font-size:9px;">(数字キーで切替)</span></div>
+        <div class="preset-list" id="presetList"></div>
+        <button class="save-preset-btn" id="savePresetBtn">＋ 現在の状態を保存</button>
+        <div class="io-row" style="margin-top:6px;">
+          <button class="mini-btn" id="exportBtn">書き出し</button>
+          <button class="mini-btn" id="importBtn">読み込み</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+      </div>
+
+      <div class="note">スペース=起動/停止　数字1-9=プリセット　A/S/D/F...=各エフェクトのON/OFF　↑↓=音量</div>
+    </div>
+  </div>
+
+  <div class="footbar" id="footBar"></div>
+</div>
+
+<script>
+/* ===================== オーディオエンジン ===================== */
+let audioCtx, sourceNode, analyser, masterGain;
+let inputTrim, limiterNode;
+let masterBypassed = false;
+let clipFlash = 0;
+let mediaStream;
+let isRunning = false;
+
+function makeDriveCurve(amount){
+  const k = (amount/100)*60 + 1;
+  const n = 4096;
+  const curve = new Float32Array(n);
+  for(let i=0;i<n;i++){ const x = (i*2)/n - 1; curve[i] = ((1+k)*x)/(1+k*Math.abs(x)); }
+  return curve;
+}
+function makeCrushCurve(bits){
+  const steps = Math.pow(2, Math.max(1,Math.min(16,bits)));
+  const n = 4096;
+  const curve = new Float32Array(n);
+  for(let i=0;i<n;i++){ const x=(i*2)/n-1; curve[i] = Math.round(x*steps)/steps; }
+  return curve;
+}
+function interpBuf(buf, idx){
+  const i0f = Math.floor(idx);
+  const frac = idx - i0f;
+  const i0 = ((i0f % buf.length) + buf.length) % buf.length;
+  const i1 = (i0+1) % buf.length;
+  return buf[i0]*(1-frac) + buf[i1]*frac;
+}
+function createPitchShiftNode(ctx){
+  const BUF = 16384, GRAIN = 2048, LATENCY = GRAIN*2;
+  const buffer = new Float32Array(BUF);
+  let writePos = 0, grainPhase = 0;
+  let ratio = 1;
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  node.onaudioprocess = (e)=>{
+    const input = e.inputBuffer.getChannelData(0);
+    const output = e.outputBuffer.getChannelData(0);
+    for(let i=0;i<input.length;i++){
+      buffer[writePos] = input[i];
+      writePos = (writePos+1) % BUF;
+
+      grainPhase += ratio;
+      if(grainPhase>=GRAIN) grainPhase -= GRAIN;
+      const phase2 = (grainPhase + GRAIN/2) % GRAIN;
+
+      const read1 = (writePos - LATENCY + grainPhase + BUF*4) % BUF;
+      const read2 = (writePos - LATENCY + phase2 + BUF*4) % BUF;
+      const w1 = 1 - Math.abs(2*grainPhase/GRAIN - 1);
+      const w2 = 1 - Math.abs(2*phase2/GRAIN - 1);
+
+      output[i] = interpBuf(buffer, read1)*w1 + interpBuf(buffer, read2)*w2;
+    }
+  };
+  return { node, setSemitones:(st)=>{ ratio = Math.pow(2, st/12); } };
+}
+function makeImpulse(ctx, duration, decay){
+  const rate = ctx.sampleRate;
+  const len = Math.floor(rate*duration);
+  const impulse = ctx.createBuffer(2, len, rate);
+  for(let ch=0; ch<2; ch++){
+    const data = impulse.getChannelData(ch);
+    for(let i=0;i<len;i++){ data[i] = (Math.random()*2-1) * Math.pow(1-i/len, decay); }
+  }
+  return impulse;
+}
+
+/* ===================== エフェクト・カタログ（EQを除く） ===================== */
+const FX_CATALOG = [
+  { type:'comp', name:'コンプレッサー', tag:'COMP', color:'var(--c-comp)', desc:'音量を整える',
+    params:[{key:'threshold', label:'スレッショルド', min:-60, max:0, def:-24, unit:'dB'},{key:'ratio', label:'レシオ', min:1, max:20, def:4, unit:':1'}],
+    build:(ctx)=>{ const n=ctx.createDynamicsCompressor(); n.knee.value=20; n.attack.value=0.01; n.release.value=0.2; return n; },
+    apply:(n,p)=>{ n.threshold.value=p.threshold; n.ratio.value=p.ratio; }
+  },
+  { type:'drive', name:'オーバードライブ', tag:'DRIVE', color:'var(--c-drive)', desc:'歪み',
+    params:[{key:'gain', label:'ゲイン', min:0, max:100, def:30, unit:'%'},{key:'tone', label:'トーン', min:0, max:100, def:55, unit:'%'},{key:'level', label:'レベル', min:0, max:100, def:60, unit:'%'}],
+    build:(ctx)=>{
+      const shaper=ctx.createWaveShaper(); shaper.oversample='4x'; shaper.curve=makeDriveCurve(30);
+      const tone=ctx.createBiquadFilter(); tone.type='lowpass'; tone.frequency.value=4000;
+      const level=ctx.createGain(); level.gain.value=0.6;
+      shaper.connect(tone); tone.connect(level);
+      return {input:shaper, output:level, shaper, tone, level};
+    },
+    apply:(n,p)=>{ n.shaper.curve=makeDriveCurve(p.gain); n.tone.frequency.value=400+(p.tone/100)*7000; n.level.gain.value=p.level/100; }
+  },
+  { type:'chorus', name:'コーラス', tag:'CHORUS', color:'var(--c-chorus)', desc:'揺らぎ・厚み',
+    params:[{key:'rate', label:'レート', min:0.1, max:8, def:1.5, unit:'Hz'},{key:'depth', label:'深さ', min:0, max:100, def:40, unit:'%'},{key:'mix', label:'ミックス', min:0, max:100, def:35, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain(); const dry=ctx.createGain(); dry.gain.value=0.65; const wet=ctx.createGain(); wet.gain.value=0.35;
+      const delay=ctx.createDelay(0.05); delay.delayTime.value=0.02;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=1.5;
+      const lfoGain=ctx.createGain(); lfoGain.gain.value=0.004;
+      const output=ctx.createGain();
+      lfo.connect(lfoGain); lfoGain.connect(delay.delayTime);
+      input.connect(dry); dry.connect(output); input.connect(delay); delay.connect(wet); wet.connect(output);
+      lfo.start();
+      return {input, output, dry, wet, delay, lfo, lfoGain};
+    },
+    apply:(n,p)=>{ n.lfo.frequency.value=p.rate; n.lfoGain.gain.value=(p.depth/100)*0.008; const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'flanger', name:'フランジャー', tag:'FLANGER', color:'var(--c-flanger)', desc:'金属的な揺れ',
+    params:[{key:'rate', label:'レート', min:0.05, max:5, def:0.3, unit:'Hz'},{key:'depth', label:'深さ', min:0, max:100, def:60, unit:'%'},{key:'feedback', label:'フィードバック', min:0, max:90, def:40, unit:'%'},{key:'mix', label:'ミックス', min:0, max:100, def:45, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain(); const dry=ctx.createGain(); dry.gain.value=0.55; const wet=ctx.createGain(); wet.gain.value=0.45;
+      const delay=ctx.createDelay(0.02); delay.delayTime.value=0.003;
+      const fb=ctx.createGain(); fb.gain.value=0.4;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.3;
+      const lfoGain=ctx.createGain(); lfoGain.gain.value=0.002;
+      const output=ctx.createGain();
+      lfo.connect(lfoGain); lfoGain.connect(delay.delayTime);
+      input.connect(dry); dry.connect(output);
+      input.connect(delay); delay.connect(wet); wet.connect(output);
+      delay.connect(fb); fb.connect(delay);
+      lfo.start();
+      return {input, output, dry, wet, delay, fb, lfo, lfoGain};
+    },
+    apply:(n,p)=>{ n.lfo.frequency.value=p.rate; n.lfoGain.gain.value=(p.depth/100)*0.004; n.fb.gain.value=p.feedback/100; const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'phaser', name:'フェイザー', tag:'PHASER', color:'var(--c-phaser)', desc:'うねり',
+    params:[{key:'rate', label:'レート', min:0.05, max:5, def:0.5, unit:'Hz'},{key:'depth', label:'深さ', min:0, max:100, def:60, unit:'%'},{key:'mix', label:'ミックス', min:0, max:100, def:50, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain(); const dry=ctx.createGain(); dry.gain.value=0.5; const wet=ctx.createGain(); wet.gain.value=0.5;
+      const stages=[]; let chain=input;
+      for(let i=0;i<4;i++){ const f=ctx.createBiquadFilter(); f.type='allpass'; f.frequency.value=600+i*400; chain.connect(f); chain=f; stages.push(f); }
+      chain.connect(wet);
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.5;
+      const lfoGain=ctx.createGain(); lfoGain.gain.value=400;
+      lfo.connect(lfoGain);
+      stages.forEach(f=>lfoGain.connect(f.frequency));
+      const output=ctx.createGain();
+      input.connect(dry); dry.connect(output); wet.connect(output);
+      lfo.start();
+      return {input, output, dry, wet, stages, lfo, lfoGain};
+    },
+    apply:(n,p)=>{ n.lfo.frequency.value=p.rate; n.lfoGain.gain.value=(p.depth/100)*800; const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'tremolo', name:'トレモロ', tag:'TREMOLO', color:'var(--c-tremolo)', desc:'音量の周期的揺れ',
+    params:[{key:'rate', label:'レート', min:0.5, max:12, def:4, unit:'Hz'},{key:'depth', label:'深さ', min:0, max:100, def:60, unit:'%'}],
+    build:(ctx)=>{
+      const amp=ctx.createGain(); amp.gain.value=0.7;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=4;
+      const lfoGain=ctx.createGain(); lfoGain.gain.value=0.3;
+      lfo.connect(lfoGain); lfoGain.connect(amp.gain);
+      lfo.start();
+      return {input:amp, output:amp, amp, lfo, lfoGain};
+    },
+    apply:(n,p)=>{ n.lfo.frequency.value=p.rate; const d=p.depth/100; n.amp.gain.value=1-d/2; n.lfoGain.gain.value=d/2; }
+  },
+  { type:'pitch', name:'ピッチシフター', tag:'PITCH', color:'var(--c-pitch)', desc:'音程を変える',
+    params:[{key:'semitones', label:'半音', min:-12, max:12, def:0, unit:'st'},{key:'mix', label:'ミックス', min:0, max:100, def:100, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain();
+      const dry=ctx.createGain(); dry.gain.value=0;
+      const wet=ctx.createGain(); wet.gain.value=1;
+      const shifter = createPitchShiftNode(ctx);
+      input.connect(shifter.node); input.connect(dry);
+      shifter.node.connect(wet);
+      const output=ctx.createGain();
+      dry.connect(output); wet.connect(output);
+      return {input, output, dry, wet, shifter};
+    },
+    apply:(n,p)=>{ n.shifter.setSemitones(p.semitones); const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'delay', name:'ディレイ', tag:'DELAY', color:'var(--c-delay)', desc:'やまびこ',
+    params:[{key:'time', label:'タイム', min:0.02, max:1, def:0.32, unit:'s'},{key:'feedback', label:'フィードバック', min:0, max:90, def:35, unit:'%'},{key:'mix', label:'ミックス', min:0, max:100, def:30, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain(); const dry=ctx.createGain(); dry.gain.value=0.7; const wet=ctx.createGain(); wet.gain.value=0.3;
+      const delay=ctx.createDelay(2); delay.delayTime.value=0.32; const fb=ctx.createGain(); fb.gain.value=0.35;
+      const output=ctx.createGain();
+      input.connect(dry); dry.connect(output); input.connect(delay); delay.connect(wet); wet.connect(output); delay.connect(fb); fb.connect(delay);
+      return {input, output, dry, wet, delay, fb};
+    },
+    apply:(n,p)=>{ n.delay.delayTime.value=p.time; n.fb.gain.value=p.feedback/100; const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'reverb', name:'リバーブ', tag:'REVERB', color:'var(--c-reverb)', desc:'残響・空間',
+    params:[{key:'size', label:'ルームサイズ', min:0.2, max:5, def:2, unit:'s'},{key:'mix', label:'ミックス', min:0, max:100, def:25, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain(); const dry=ctx.createGain(); dry.gain.value=0.75; const wet=ctx.createGain(); wet.gain.value=0.25;
+      const conv=ctx.createConvolver(); conv.buffer=makeImpulse(ctx,2,2.5);
+      const output=ctx.createGain();
+      input.connect(dry); dry.connect(output); input.connect(conv); conv.connect(wet); wet.connect(output);
+      return {input, output, dry, wet, conv, ctx};
+    },
+    apply:(n,p)=>{ if(Math.abs((n._size||2)-p.size)>0.05){ n.conv.buffer=makeImpulse(n.ctx,p.size,2.5); n._size=p.size; } const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+  { type:'filter', name:'フィルター', tag:'FILTER', color:'var(--c-filter)', desc:'帯域を絞る・ワウ',
+    params:[{key:'cutoff', label:'カットオフ', min:200, max:6000, def:1200, unit:'Hz'},{key:'resonance', label:'レゾナンス', min:0.5, max:20, def:5, unit:'Q'},{key:'rate', label:'レート', min:0, max:8, def:2, unit:'Hz'},{key:'depth', label:'深さ', min:0, max:100, def:40, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain();
+      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=1200; filter.Q.value=5;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=2;
+      const lfoGain=ctx.createGain(); lfoGain.gain.value=0;
+      input.connect(filter); lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+      lfo.start();
+      return {input, output:filter, filter, lfo, lfoGain};
+    },
+    apply:(n,p)=>{ n.filter.frequency.value=p.cutoff; n.filter.Q.value=p.resonance; n.lfo.frequency.value=p.rate; n.lfoGain.gain.value=(p.depth/100)*Math.min(p.cutoff*0.7, 2800); }
+  },
+  { type:'gate', name:'ノイズゲート', tag:'GATE', color:'var(--c-gate)', desc:'小音量を抑制',
+    params:[{key:'threshold', label:'スレッショルド', min:-80, max:-10, def:-45, unit:'dB'},{key:'release', label:'リリース', min:50, max:500, def:150, unit:'ms'}],
+    build:(ctx)=>{ const n=ctx.createDynamicsCompressor(); n.knee.value=0; n.ratio.value=20; n.attack.value=0.003; return n; },
+    apply:(n,p)=>{ n.threshold.value=p.threshold; n.release.value=p.release/1000; }
+  },
+  { type:'crush', name:'ビットクラッシャー', tag:'CRUSH', color:'var(--c-crush)', desc:'デジタル劣化',
+    params:[{key:'bits', label:'ビット数', min:1, max:16, def:8, unit:'bit'},{key:'tone', label:'トーン', min:0, max:100, def:50, unit:'%'},{key:'mix', label:'ミックス', min:0, max:100, def:70, unit:'%'}],
+    build:(ctx)=>{
+      const input=ctx.createGain();
+      const shaper=ctx.createWaveShaper(); shaper.curve=makeCrushCurve(8);
+      const tone=ctx.createBiquadFilter(); tone.type='lowpass'; tone.frequency.value=4000;
+      const dry=ctx.createGain(); dry.gain.value=0.3; const wet=ctx.createGain(); wet.gain.value=0.7;
+      const output=ctx.createGain();
+      input.connect(dry); dry.connect(output);
+      input.connect(shaper); shaper.connect(tone); tone.connect(wet); wet.connect(output);
+      return {input, output, dry, wet, shaper, tone};
+    },
+    apply:(n,p)=>{ n.shaper.curve=makeCrushCurve(p.bits); n.tone.frequency.value=300+(p.tone/100)*7000; const m=p.mix/100; n.dry.gain.value=1-m; n.wet.gain.value=m; }
+  },
+];
+
+function findType(typeId){ return FX_CATALOG.find(f=>f.type===typeId); }
+
+/* チェーン本体: 動的な配列。各要素 {instanceId, type, bypassed, params} */
+let chain = [];
+let instanceSeq = 1;
+const builtNodes = {}; // instanceId -> nodeSet
+
+function defaultParams(typeTpl){ const o={}; typeTpl.params.forEach(p=>o[p.key]=p.def); return o; }
+
+function addEffect(typeId, paramsOverride){
+  const tpl = findType(typeId);
+  if(!tpl) return;
+  const id = 'fx'+(instanceSeq++);
+  chain.push({ instanceId:id, type:typeId, bypassed:false, params:Object.assign(defaultParams(tpl), paramsOverride||{}) });
+  activePresetId = null;
+  rebuildChain(); renderBoard();
+  if(typeof renderPresetList==='function') renderPresetList();
+}
+function removeEffect(instanceId){
+  chain = chain.filter(c=>c.instanceId!==instanceId);
+  delete builtNodes[instanceId];
+  activePresetId = null;
+  rebuildChain(); renderBoard();
+  if(typeof renderPresetList==='function') renderPresetList();
+}
+
+/* ===================== EQ（常設・最終段） ===================== */
+const EQ_BANDS = [
+  {type:'lowshelf', freq:90,   gain:0, color:'#7c8c50'},
+  {type:'peaking',  freq:300,  gain:0, q:1, color:'#7c8c50'},
+  {type:'peaking',  freq:1200, gain:0, q:1, color:'#7c8c50'},
+  {type:'peaking',  freq:4000, gain:0, q:1, color:'#7c8c50'},
+  {type:'highshelf',freq:9000, gain:0, color:'#7c8c50'},
+];
+let eqFilters = [];
+
+function buildEQ(ctx){
+  eqFilters = EQ_BANDS.map(b=>{
+    const f = ctx.createBiquadFilter();
+    f.type = b.type; f.frequency.value = b.freq; f.gain.value = b.gain;
+    if(b.q) f.Q.value = b.q;
+    return f;
+  });
+  for(let i=0;i<eqFilters.length-1;i++) eqFilters[i].connect(eqFilters[i+1]);
+  return { input:eqFilters[0], output:eqFilters[eqFilters.length-1] };
+}
+function applyEQBand(i){
+  if(!eqFilters[i]) return;
+  eqFilters[i].frequency.value = EQ_BANDS[i].freq;
+  eqFilters[i].gain.value = EQ_BANDS[i].gain;
+}
+
+/* ===================== ボード描画 ===================== */
+const board = document.getElementById('pedalboard');
+
+function formatVal(val, p){ return (p.unit==='Hz'||p.unit===':1'||p.unit==='s'||p.unit==='Q') ? val.toFixed(2)+p.unit : Math.round(val)+p.unit; }
+
+const BYPASS_KEYS = ['a','s','d','f','g','h','j','k','l',';'];
+
+function renderBoard(){
+  board.innerHTML='';
+  chain.forEach((inst, idx)=>{
+    const tpl = findType(inst.type);
+    const div = document.createElement('div');
+    div.className = 'pedal' + (inst.bypassed ? ' bypassed':'');
+    div.style.setProperty('--fx-color', tpl.color);
+    div.dataset.id = inst.instanceId;
+    div.dataset.num = String(idx+1).padStart(2,'0');
+
+    const controlsHtml = tpl.params.map(p=>{
+      const val = inst.params[p.key];
+      const pct = (val - p.min)/(p.max-p.min);
+      const rot = (pct*270 - 135).toFixed(1);
+      return `<div class="knob-wrap">
+        <div class="knob-ring" data-id="${inst.instanceId}" data-key="${p.key}" data-min="${p.min}" data-max="${p.max}" style="--rot:${rot}deg; --pct:${pct.toFixed(4)}">
+          <div class="knob-cap"></div>
+        </div>
+        <div class="knob-label">${p.label}</div>
+        <div class="knob-val">${formatVal(val,p)}</div>
+      </div>`;
+    }).join('');
+
+    const keyBadge = idx<BYPASS_KEYS.length ? `<span class="pedal-key">${BYPASS_KEYS[idx].toUpperCase()}</span>` : '';
+
+    div.innerHTML = `
+      <span class="drag-handle" draggable="true" data-id="${inst.instanceId}">⠿</span>
+      <div class="pedal-name"><div class="row1">${keyBadge}<span>${tpl.name}</span></div><span class="tag">${tpl.tag}</span></div>
+      <div class="pedal-controls">${controlsHtml}</div>
+      <div class="order-btns">
+        <button data-act="up" data-id="${inst.instanceId}">▲</button>
+        <button data-act="down" data-id="${inst.instanceId}">▼</button>
+      </div>
+      <div class="bypass-btn" data-id="${inst.instanceId}"><div class="dot"></div></div>
+      <button class="dup-btn" data-dup="${inst.instanceId}">⧉</button>
+      <button class="remove-btn" data-id="${inst.instanceId}">✕</button>
+    `;
+    board.appendChild(div);
+  });
+  attachKnobEvents();
+}
+
+board.addEventListener('click', (e)=>{
+  const dup = e.target.closest('[data-dup]');
+  if(dup){
+    const idx = chain.findIndex(c=>c.instanceId===dup.dataset.dup);
+    if(idx>=0){
+      const src = chain[idx];
+      const clone = { instanceId:'fx'+(instanceSeq++), type:src.type, bypassed:src.bypassed, params:Object.assign({}, src.params) };
+      chain.splice(idx+1, 0, clone);
+      activePresetId = null;
+      rebuildChain(); renderBoard(); if(typeof renderPresetList==='function') renderPresetList();
+    }
+    return;
+  }
+  const rb = e.target.closest('.remove-btn');
+  if(rb){ removeEffect(rb.dataset.id); return; }
+  const bp = e.target.closest('.bypass-btn');
+  if(bp){ const inst = chain.find(c=>c.instanceId===bp.dataset.id); inst.bypassed=!inst.bypassed; rebuildChain(); renderBoard(); return; }
+  const ob = e.target.closest('.order-btns button');
+  if(ob){
+    const id = ob.dataset.id; const act = ob.dataset.act; const i = chain.findIndex(c=>c.instanceId===id);
+    if(act==='up' && i>0){ [chain[i-1],chain[i]]=[chain[i],chain[i-1]]; }
+    if(act==='down' && i<chain.length-1){ [chain[i+1],chain[i]]=[chain[i],chain[i+1]]; }
+    rebuildChain(); renderBoard();
+  }
+});
+
+/* ===================== ドラッグ&ドロップで並び替え ===================== */
+let dragSrcId = null;
+board.addEventListener('dragstart', (e)=>{
+  const handle = e.target.closest('.drag-handle');
+  if(!handle){ e.preventDefault(); return; }
+  dragSrcId = handle.dataset.id;
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain', dragSrcId); }catch(err){}
+  const pedalEl = handle.closest('.pedal');
+  if(pedalEl) pedalEl.classList.add('dragging');
+});
+board.addEventListener('dragend', ()=>{
+  document.querySelectorAll('.pedal.dragging, .pedal.drag-over').forEach(p=>p.classList.remove('dragging','drag-over'));
+  dragSrcId = null;
+});
+board.addEventListener('dragover', (e)=>{
+  if(!dragSrcId) return;
+  e.preventDefault();
+  document.querySelectorAll('.pedal.drag-over').forEach(p=>p.classList.remove('drag-over'));
+  const targetPedal = e.target.closest('.pedal');
+  if(targetPedal && targetPedal.dataset.id!==dragSrcId) targetPedal.classList.add('drag-over');
+});
+board.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  document.querySelectorAll('.pedal.drag-over').forEach(p=>p.classList.remove('drag-over'));
+  const targetPedal = e.target.closest('.pedal');
+  if(!targetPedal || !dragSrcId || targetPedal.dataset.id===dragSrcId) return;
+  const targetId = targetPedal.dataset.id;
+  const srcIdx = chain.findIndex(c=>c.instanceId===dragSrcId);
+  if(srcIdx<0) return;
+  const rect = targetPedal.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height/2;
+  const [moved] = chain.splice(srcIdx,1);
+  let insertAt = chain.findIndex(c=>c.instanceId===targetId);
+  if(!before) insertAt += 1;
+  chain.splice(insertAt, 0, moved);
+  activePresetId = null;
+  rebuildChain(); renderBoard();
+});
+
+function attachKnobEvents(){
+  document.querySelectorAll('.knob-ring').forEach(knob=>{
+    let dragging=false, startY=0, startVal=0;
+    const instanceId = knob.dataset.id, key = knob.dataset.key;
+    const min = parseFloat(knob.dataset.min), max=parseFloat(knob.dataset.max);
+    const onMove = (clientY)=>{
+      const dy = startY - clientY; const range = max-min;
+      let val = startVal + (dy/150)*range; val = Math.max(min, Math.min(max, val));
+      const inst = chain.find(c=>c.instanceId===instanceId);
+      inst.params[key] = val;
+      const pct = (val-min)/(max-min);
+      knob.style.setProperty('--rot', (pct*270-135)+'deg');
+      knob.style.setProperty('--pct', pct.toFixed(4));
+      const tpl = findType(inst.type); const p = tpl.params.find(p=>p.key===key);
+      knob.parentElement.querySelector('.knob-val').textContent = formatVal(val,p);
+      applyInstanceParams(inst);
+    };
+    knob.addEventListener('mousedown', (e)=>{ const inst=chain.find(c=>c.instanceId===instanceId); dragging=true; startY=e.clientY; startVal=inst.params[key]; document.body.style.cursor='ns-resize'; });
+    window.addEventListener('mousemove', (e)=>{ if(dragging) onMove(e.clientY); });
+    window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.cursor=''; });
+    knob.addEventListener('touchstart', (e)=>{ const inst=chain.find(c=>c.instanceId===instanceId); dragging=true; startY=e.touches[0].clientY; startVal=inst.params[key]; }, {passive:true});
+    knob.addEventListener('touchmove', (e)=>{ if(dragging) onMove(e.touches[0].clientY); }, {passive:true});
+    knob.addEventListener('touchend', ()=>{ dragging=false; });
+  });
+}
+
+function applyInstanceParams(inst){
+  const tpl = findType(inst.type);
+  const nodeSet = builtNodes[inst.instanceId];
+  if(nodeSet) tpl.apply(nodeSet, inst.params);
+}
+
+/* ===================== 追加メニュー ===================== */
+const addBtn = document.getElementById('addBtn');
+const addMenu = document.getElementById('addMenu');
+addMenu.innerHTML = FX_CATALOG.map(tpl=>`
+  <button data-type="${tpl.type}">
+    <span class="sw" style="background:${tpl.color.replace('var(','').replace(')','')}; background:${tpl.color};"></span>
+    ${tpl.name}<span class="desc">${tpl.desc}</span>
+  </button>
+`).join('');
+addBtn.addEventListener('click', (e)=>{ e.stopPropagation(); addMenu.classList.toggle('open'); });
+addMenu.addEventListener('click', (e)=>{
+  const b = e.target.closest('button[data-type]');
+  if(b){ addEffect(b.dataset.type); addMenu.classList.remove('open'); }
+});
+document.addEventListener('click', ()=> addMenu.classList.remove('open'));
+
+/* ===================== 信号チェーン構築 ===================== */
+function rebuildChain(){
+  if(!isRunning) return;
+  inputTrim.disconnect();
+  Object.values(builtNodes).forEach(ns=>{ try{ if(ns.output) ns.output.disconnect(); else if(ns.disconnect) ns.disconnect(); }catch(e){} });
+  if(eqFilters.length) try{ eqFilters[eqFilters.length-1].disconnect(); }catch(e){}
+  try{ analyser.disconnect(); }catch(e){}
+
+  if(masterBypassed){
+    inputTrim.connect(analyser);
+  } else {
+    let current = inputTrim;
+    chain.forEach(inst=>{
+      if(inst.bypassed) return;
+      const tpl = findType(inst.type);
+      let nodeSet = builtNodes[inst.instanceId];
+      if(!nodeSet){
+        const built = tpl.build(audioCtx);
+        nodeSet = built.input ? built : {input:built, output:built};
+        builtNodes[inst.instanceId] = nodeSet;
+        tpl.apply(nodeSet, inst.params);
+      }
+      current.connect(nodeSet.input);
+      current = nodeSet.output;
+    });
+    // EQを最終段として常に接続
+    current.connect(eqFilters[0]);
+    eqFilters[eqFilters.length-1].connect(analyser);
+  }
+  analyser.connect(limiterNode);
+  limiterNode.connect(masterGain);
+}
+
+/* ===================== マイク / オーディオ起動 ===================== */
+const powerBtn = document.getElementById('powerBtn');
+const powerLed = document.getElementById('powerLed');
+const powerLabel = document.getElementById('powerLabel');
+const statusLine = document.getElementById('statusLine');
+const deviceSelect = document.getElementById('deviceSelect');
+
+async function listDevices(){
+  try{
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputs = devices.filter(d=>d.kind==='audioinput');
+    deviceSelect.innerHTML = inputs.map(d=>`<option value="${d.deviceId}">${d.label || 'オーディオ入力'}</option>`).join('') || '<option>入力デバイスが見つかりません</option>';
+  }catch(e){}
+}
+listDevices();
+document.getElementById('inputSource').addEventListener('change', (e)=>{
+  document.getElementById('deviceField').style.display = e.target.value==='tab' ? 'none' : 'block';
+});
+
+powerBtn.addEventListener('click', async ()=>{
+  if(isRunning){
+    if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop());
+    if(audioCtx) audioCtx.close();
+    isRunning=false;
+    powerBtn.classList.remove('on'); powerLed.classList.remove('on');
+    powerLabel.textContent = '起動';
+    statusLine.textContent = '停止しました';
+    return;
+  }
+  try{
+    statusLine.textContent = '入力を準備中...';
+    const sourceType = document.getElementById('inputSource').value;
+
+    if(sourceType==='tab'){
+      mediaStream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true });
+      const audioTracks = mediaStream.getAudioTracks();
+      if(audioTracks.length===0){
+        mediaStream.getTracks().forEach(t=>t.stop());
+        statusLine.textContent = '音声共有が選択されませんでした（共有時に「音声を共有」をオンにしてください）';
+        return;
+      }
+      mediaStream.getVideoTracks().forEach(t=>t.stop());
+      audioTracks[0].addEventListener('ended', ()=>{ if(isRunning) powerBtn.click(); });
+    } else {
+      const deviceId = deviceSelect.value;
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio:{ deviceId: deviceId ? {exact:deviceId} : undefined, echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+      });
+      await listDevices();
+    }
+
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)({ latencyHint:'interactive' });
+    sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+    inputTrim = audioCtx.createGain(); inputTrim.gain.value = document.getElementById('inputTrimSlider').value/100;
+    sourceNode.connect(inputTrim);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+    limiterNode = audioCtx.createDynamicsCompressor();
+    limiterNode.threshold.value = -3; limiterNode.knee.value = 0; limiterNode.ratio.value = 20;
+    limiterNode.attack.value = 0.001; limiterNode.release.value = 0.1;
+    masterGain = audioCtx.createGain(); masterGain.gain.value = document.getElementById('masterVol').value/100;
+    masterGain.connect(audioCtx.destination);
+
+    const eqNodeSet = buildEQ(audioCtx);
+    eqFilters = eqFilters; // already set inside buildEQ
+
+    rebuildChain();
+
+    isRunning = true;
+    powerBtn.classList.add('on'); powerLed.classList.add('on');
+    powerLabel.textContent = '停止';
+    statusLine.textContent = '稼働中';
+    document.getElementById('srInfo').textContent = `${audioCtx.sampleRate} Hz`;
+    document.getElementById('latInfo').textContent = `遅延 ${((audioCtx.baseLatency||0.01)*1000).toFixed(1)} ms`;
+
+    startMeters();
+  }catch(err){
+    let msg = err && err.message ? err.message : String(err);
+    if(location.protocol==='file:'){
+      msg = 'file:// から開いているためブロックされています。ローカルサーバー経由（http://localhost）で開いてください。';
+    } else if(err && err.name==='NotAllowedError'){
+      msg = 'アクセスが拒否されました。ブラウザのサイト設定でマイク/画面共有を許可してください。';
+    } else if(err && err.name==='NotFoundError'){
+      msg = '入力デバイスが見つかりません。';
+    }
+    statusLine.textContent = msg;
+    console.error(err);
+  }
+});
+
+document.getElementById('masterVol').addEventListener('input', (e)=>{ if(masterGain) masterGain.gain.value = e.target.value/100; });
+document.getElementById('inputTrimSlider').addEventListener('input', (e)=>{ if(inputTrim) inputTrim.gain.value = e.target.value/100; });
+
+const bypassAllBtn = document.getElementById('bypassAllBtn');
+bypassAllBtn.addEventListener('click', ()=>{
+  masterBypassed = !masterBypassed;
+  bypassAllBtn.classList.toggle('active', masterBypassed);
+  bypassAllBtn.textContent = masterBypassed ? '原音再生中' : '全バイパス';
+  rebuildChain();
+});
+
+/* ===================== A/Bチャンネル ===================== */
+let channelState = { A:null, B:null };
+let currentChannel = 'A';
+const chBtnA = document.getElementById('chBtnA');
+const chBtnB = document.getElementById('chBtnB');
+
+function snapshotChannel(){
+  return {
+    chain: chain.map(inst=>({ type:inst.type, bypassed:inst.bypassed, params:Object.assign({}, inst.params) })),
+    eq: EQ_BANDS.map(b=>b.gain),
+  };
+}
+function loadChannel(snap){
+  chain = []; Object.keys(builtNodes).forEach(k=>delete builtNodes[k]);
+  if(snap){
+    snap.chain.forEach(item=>{
+      const tpl = findType(item.type);
+      const id = 'fx'+(instanceSeq++);
+      chain.push({ instanceId:id, type:item.type, bypassed:item.bypassed, params:Object.assign(defaultParams(tpl), item.params) });
+    });
+    EQ_BANDS.forEach((b,i)=>{ b.gain = snap.eq[i]; });
+  } else {
+    EQ_BANDS.forEach((b,i)=>{ b.gain = 0; });
+  }
+  Object.keys(eqFilters.length?{}:{}); // no-op guard
+  if(eqFilters.length) EQ_BANDS.forEach((b,i)=>applyEQBand(i));
+  rebuildChain(); renderBoard(); drawEQ();
+}
+function switchChannel(target){
+  if(target===currentChannel) return;
+  channelState[currentChannel] = snapshotChannel();
+  currentChannel = target;
+  chBtnA.classList.toggle('active', target==='A');
+  chBtnB.classList.toggle('active', target==='B');
+  loadChannel(channelState[target]);
+}
+chBtnA.addEventListener('click', ()=>switchChannel('A'));
+chBtnB.addEventListener('click', ()=>switchChannel('B'));
+
+/* ===================== 波形 / 周波数表示 ===================== */
+const canvas = document.getElementById('scope');
+const ctx2d = canvas.getContext('2d');
+let scopeMode = 'wave';
+document.querySelectorAll('.seg-toggle button').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.seg-toggle button').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active'); scopeMode = tab.dataset.mode;
+    const isTuner = scopeMode==='tuner';
+    canvas.style.display = isTuner ? 'none' : 'block';
+    document.getElementById('tunerDisplay').classList.toggle('active', isTuner);
+  });
+});
+
+function resizeCanvas(cv, c2d){
+  const ratio = window.devicePixelRatio||1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w*ratio; cv.height = h*ratio;
+  c2d.setTransform(ratio,0,0,ratio,0,0);
+}
+window.addEventListener('resize', ()=>{ resizeCanvas(canvas, ctx2d); resizeCanvas(eqCanvas, eqCtx); drawEQ(); });
+setTimeout(()=>{ resizeCanvas(canvas, ctx2d); resizeCanvas(eqCanvas, eqCtx); drawEQ(); }, 50);
+
+function drawIdle(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx2d.clearRect(0,0,w,h);
+  ctx2d.strokeStyle = '#202126'; ctx2d.lineWidth=1;
+  for(let i=0;i<=8;i++){ const x = (w/8)*i; ctx2d.beginPath(); ctx2d.moveTo(x,0); ctx2d.lineTo(x,h); ctx2d.stroke(); }
+  ctx2d.beginPath(); ctx2d.moveTo(0,h/2); ctx2d.lineTo(w,h/2);
+  ctx2d.strokeStyle='#2c2d34'; ctx2d.stroke();
+  ctx2d.fillStyle='#5a5b63'; ctx2d.font='11px Inter'; ctx2d.textAlign='center';
+  ctx2d.fillText('起動ボタンを押して信号を入力', w/2, h/2-10);
+}
+drawIdle();
+
+let timeData, freqData, floatTimeData;
+let clipDecay = 0;
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function autoCorrelate(buf, sampleRate){
+  let SIZE = buf.length;
+  let rms = 0;
+  for(let i=0;i<SIZE;i++){ rms += buf[i]*buf[i]; }
+  rms = Math.sqrt(rms/SIZE);
+  if(rms<0.01) return -1;
+
+  let r1=0, r2=SIZE-1; const thres=0.2;
+  for(let i=0;i<SIZE/2;i++){ if(Math.abs(buf[i])<thres){ r1=i; break; } }
+  for(let i=1;i<SIZE/2;i++){ if(Math.abs(buf[SIZE-i])<thres){ r2=SIZE-i; break; } }
+  const trimmed = buf.slice(r1,r2);
+  const N = trimmed.length;
+  if(N<8) return -1;
+
+  const c = new Float32Array(N);
+  for(let i=0;i<N;i++){
+    let sum=0;
+    for(let j=0;j<N-i;j++){ sum += trimmed[j]*trimmed[j+i]; }
+    c[i]=sum;
+  }
+  let d=0; while(d<N-1 && c[d]>c[d+1]) d++;
+  let maxval=-1, maxpos=-1;
+  for(let i=d;i<N;i++){ if(c[i]>maxval){ maxval=c[i]; maxpos=i; } }
+  let T0 = maxpos;
+  if(T0>0 && T0<N-1){
+    const x1=c[T0-1], x2=c[T0], x3=c[T0+1];
+    const a=(x1+x3-2*x2)/2, b=(x3-x1)/2;
+    if(a) T0 = T0 - b/(2*a);
+  }
+  return T0>0 ? sampleRate/T0 : -1;
+}
+function freqToNote(freq){
+  const noteNum = 12*(Math.log2(freq/440))+69;
+  const rounded = Math.round(noteNum);
+  const cents = Math.round((noteNum-rounded)*100);
+  const name = NOTE_NAMES[((rounded%12)+12)%12];
+  const octave = Math.floor(rounded/12)-1;
+  return {name:name+octave, cents};
+}
+function updateTuner(){
+  if(!floatTimeData) floatTimeData = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(floatTimeData);
+  const freq = autoCorrelate(floatTimeData, audioCtx.sampleRate);
+  const noteEl=document.getElementById('tunerNote');
+  const centsEl=document.getElementById('tunerCents');
+  const needle=document.getElementById('tunerNeedle');
+  if(freq===-1 || freq<55 || freq>1500){
+    noteEl.textContent='—'; noteEl.classList.remove('intune');
+    centsEl.textContent='弦/鍵盤を鳴らしてください';
+    needle.style.left='50%';
+    return;
+  }
+  const {name, cents} = freqToNote(freq);
+  noteEl.textContent = name;
+  centsEl.textContent = `${freq.toFixed(1)} Hz　${cents>0?'+':''}${cents} cent`;
+  noteEl.classList.toggle('intune', Math.abs(cents)<=5);
+  const pct = Math.max(-50, Math.min(50, cents));
+  needle.style.left = (50+pct)+'%';
+}
+
+function updateBandMeter(){
+  if(!analyser) return;
+  if(!freqData) freqData = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freqData);
+  const nyquist = audioCtx.sampleRate/2;
+  const binHz = nyquist/freqData.length;
+  function avgRange(loHz, hiHz){
+    const loBin = Math.max(0, Math.floor(loHz/binHz));
+    const hiBin = Math.min(freqData.length-1, Math.ceil(hiHz/binHz));
+    let sum=0, n=0;
+    for(let i=loBin;i<=hiBin;i++){ sum+=freqData[i]; n++; }
+    return n ? sum/n : 0;
+  }
+  const low = avgRange(20,250), mid = avgRange(250,4000), high = avgRange(4000, Math.min(20000,nyquist));
+  const pcts = [low,mid,high].map(v=>Math.min(100,(v/200)*100));
+  document.getElementById('bandLowFill').style.height = pcts[0]+'%';
+  document.getElementById('bandMidFill').style.height = pcts[1]+'%';
+  document.getElementById('bandHighFill').style.height = pcts[2]+'%';
+  const maxV = Math.max(low,mid,high);
+  const ids = ['bandLow','bandMid','bandHigh'];
+  ids.forEach((id,i)=> document.getElementById(id).classList.toggle('dominant', [low,mid,high][i]===maxV && maxV>8));
+}
+
+function drawScope(){
+  requestAnimationFrame(drawScope);
+  if(!isRunning || !analyser) return;
+
+  updateBandMeter();
+
+  if(scopeMode==='tuner'){ updateTuner(); }
+  else {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx2d.clearRect(0,0,w,h);
+    ctx2d.strokeStyle='#202126'; ctx2d.lineWidth=1;
+    for(let i=0;i<=8;i++){ const x=(w/8)*i; ctx2d.beginPath(); ctx2d.moveTo(x,0); ctx2d.lineTo(x,h); ctx2d.stroke(); }
+
+    if(scopeMode==='wave'){
+      if(!timeData) timeData = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(timeData);
+      ctx2d.lineWidth=1.8; ctx2d.strokeStyle = '#9bb06e';
+      ctx2d.shadowColor='rgba(155,176,110,.45)'; ctx2d.shadowBlur=5;
+      ctx2d.beginPath();
+      const slice = w/timeData.length; let x=0;
+      for(let i=0;i<timeData.length;i++){
+        const v = timeData[i]/128.0; const y = v*h/2;
+        if(i===0) ctx2d.moveTo(x,y); else ctx2d.lineTo(x,y);
+        x+=slice;
+      }
+      ctx2d.stroke(); ctx2d.shadowBlur=0;
+      ctx2d.strokeStyle='#2c2d34';
+      ctx2d.beginPath(); ctx2d.moveTo(0,h/2); ctx2d.lineTo(w,h/2); ctx2d.stroke();
+    } else {
+      if(!freqData) freqData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(freqData);
+      const barCount = freqData.length*0.5;
+      const barW = w/barCount; let x=0; let peakIdx=0, peakVal=0;
+      for(let i=0;i<barCount;i++){
+        const v = freqData[i]; if(v>peakVal){ peakVal=v; peakIdx=i; }
+        const barH = (v/255)*h;
+        const grad = ctx2d.createLinearGradient(0,h-barH,0,h);
+        grad.addColorStop(0,'#ff5a5a'); grad.addColorStop(0.5,'#ffd23f'); grad.addColorStop(1,'#3ddc97');
+        ctx2d.fillStyle=grad; ctx2d.fillRect(x, h-barH, Math.max(1,barW-1), barH);
+        x+=barW;
+      }
+      const nyquist = audioCtx.sampleRate/2;
+      document.getElementById('freqInfo').textContent = `ピーク ${((peakIdx/freqData.length)*nyquist).toFixed(0)} Hz`;
+    }
+  }
+
+  if(!timeData) timeData = new Uint8Array(analyser.fftSize);
+  analyser.getByteTimeDomainData(timeData);
+  let sum=0, peak=0;
+  for(let i=0;i<timeData.length;i++){
+    const d=(timeData[i]-128)/128; sum+=d*d;
+    const ad=Math.abs(d); if(ad>peak) peak=ad;
+  }
+  const rms = Math.sqrt(sum/timeData.length);
+  const pct = Math.min(100, rms*260);
+  document.getElementById('inputBar').style.width = pct+'%';
+  document.getElementById('vuL').style.width = pct+'%';
+  document.getElementById('vuR').style.width = Math.max(0,pct-3)+'%';
+
+  if(peak>0.92) clipDecay=18;
+  const clipDot = document.getElementById('clipDot');
+  if(clipDecay>0){ clipDot.classList.add('hit'); clipDecay--; } else { clipDot.classList.remove('hit'); }
+}
+function startMeters(){ drawScope(); }
+requestAnimationFrame(drawScope);
+
+/* ===================== EQ波形エディタ ===================== */
+const eqCanvas = document.getElementById('eqCanvas');
+const eqCtx = eqCanvas.getContext('2d');
+const FREQ_MIN=20, FREQ_MAX=20000, GAIN_MIN=-15, GAIN_MAX=15;
+
+function freqToX(f, w){ return (Math.log10(f/FREQ_MIN)/Math.log10(FREQ_MAX/FREQ_MIN))*w; }
+function xToFreq(x, w){ return FREQ_MIN*Math.pow(FREQ_MAX/FREQ_MIN, x/w); }
+function gainToY(g, h){ return h/2 - (g/GAIN_MAX)*(h/2-8); }
+function yToGain(y, h){ return -((y-h/2)/(h/2-8))*GAIN_MAX; }
+
+function drawEQ(){
+  const w = eqCanvas.clientWidth, h = eqCanvas.clientHeight;
+  if(w===0) return;
+  eqCtx.clearRect(0,0,w,h);
+
+  // グリッド（dB）
+  eqCtx.strokeStyle='#1c1d21'; eqCtx.lineWidth=1; eqCtx.font='8.5px JetBrains Mono'; eqCtx.fillStyle='#4a4b53';
+  [-12,-6,0,6,12].forEach(g=>{
+    const y = gainToY(g,h);
+    eqCtx.beginPath(); eqCtx.moveTo(0,y); eqCtx.lineTo(w,y);
+    eqCtx.strokeStyle = g===0 ? '#34353c' : '#1c1d21'; eqCtx.stroke();
+    eqCtx.fillText((g>0?'+':'')+g, 4, y-3);
+  });
+  // グリッド（周波数）
+  [100,1000,10000].forEach(f=>{
+    const x = freqToX(f,w);
+    eqCtx.beginPath(); eqCtx.moveTo(x,0); eqCtx.lineTo(x,h);
+    eqCtx.strokeStyle='#1c1d21'; eqCtx.stroke();
+    eqCtx.fillText(f>=1000?(f/1000)+'k':f, x+3, h-4);
+  });
+
+  // カーブ（各バンドのゲインを周波数軸上で滑らかに補間した概観表示）
+  eqCtx.beginPath();
+  for(let px=0; px<=w; px+=2){
+    const f = xToFreq(px, w);
+    let g = 0;
+    // 各バンドの寄与をガウス的に重ね合わせて概形を描く
+    EQ_BANDS.forEach((b,i)=>{
+      const dist = Math.log2(f/b.freq);
+      let weight;
+      if(b.type==='lowshelf') weight = f<=b.freq ? 1 : Math.exp(-Math.pow(dist*1.3,2));
+      else if(b.type==='highshelf') weight = f>=b.freq ? 1 : Math.exp(-Math.pow(dist*1.3,2));
+      else weight = Math.exp(-Math.pow(dist*1.1,2));
+      g += b.gain*weight;
+    });
+    g = Math.max(GAIN_MIN, Math.min(GAIN_MAX, g));
+    const y = gainToY(g,h);
+    if(px===0) eqCtx.moveTo(px,y); else eqCtx.lineTo(px,y);
+  }
+  eqCtx.strokeStyle='#7c8c50'; eqCtx.lineWidth=2; eqCtx.shadowColor='rgba(124,140,80,.4)'; eqCtx.shadowBlur=6; eqCtx.stroke();
+  eqCtx.shadowBlur=0;
+  // 塗りつぶし（0dBライン基準）
+  eqCtx.lineTo(w, gainToY(0,h)); eqCtx.lineTo(0, gainToY(0,h)); eqCtx.closePath();
+  eqCtx.fillStyle='rgba(255,206,74,.06)'; eqCtx.fill();
+
+  // ポイント
+  EQ_BANDS.forEach((b,i)=>{
+    const x = freqToX(b.freq, w), y = gainToY(b.gain, h);
+    eqCtx.beginPath(); eqCtx.arc(x,y,5,0,Math.PI*2);
+    eqCtx.fillStyle = i===eqDragIdx ? '#cfe0a8' : '#7c8c50';
+    eqCtx.fill();
+    eqCtx.strokeStyle='#0d0d10'; eqCtx.lineWidth=2; eqCtx.stroke();
+  });
+
+  document.getElementById('eqReadout').textContent = EQ_BANDS.map(b=>`${b.freq>=1000?(b.freq/1000)+'k':b.freq}Hz ${b.gain>0?'+':''}${b.gain.toFixed(1)}dB`).join('  ／  ');
+}
+
+let eqDragIdx = -1;
+function eqPointerPos(e){
+  const rect = eqCanvas.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  return {x:cx, y:cy};
+}
+function nearestBand(x,y,w,h){
+  let best=-1, bestDist=Infinity;
+  EQ_BANDS.forEach((b,i)=>{
+    const bx=freqToX(b.freq,w), by=gainToY(b.gain,h);
+    const d=Math.hypot(bx-x,by-y);
+    if(d<bestDist){ bestDist=d; best=i; }
+  });
+  return bestDist<28 ? best : -1;
+}
+eqCanvas.addEventListener('mousedown', (e)=>{
+  const w=eqCanvas.clientWidth,h=eqCanvas.clientHeight; const pos=eqPointerPos(e);
+  eqDragIdx = nearestBand(pos.x,pos.y,w,h);
+});
+window.addEventListener('mousemove',(e)=>{
+  if(eqDragIdx<0) return;
+  const w=eqCanvas.clientWidth,h=eqCanvas.clientHeight; const pos=eqPointerPos(e);
+  const band = EQ_BANDS[eqDragIdx];
+  band.gain = Math.max(GAIN_MIN, Math.min(GAIN_MAX, yToGain(pos.y,h)));
+  if(band.type==='peaking'){ band.freq = Math.max(FREQ_MIN, Math.min(FREQ_MAX, xToFreq(Math.max(0,Math.min(w,pos.x)),w))); }
+  applyEQBand(eqDragIdx);
+  drawEQ();
+});
+window.addEventListener('mouseup', ()=>{ eqDragIdx=-1; drawEQ(); });
+eqCanvas.addEventListener('touchstart',(e)=>{ const w=eqCanvas.clientWidth,h=eqCanvas.clientHeight; const pos=eqPointerPos(e); eqDragIdx=nearestBand(pos.x,pos.y,w,h); },{passive:true});
+eqCanvas.addEventListener('touchmove',(e)=>{
+  if(eqDragIdx<0) return;
+  const w=eqCanvas.clientWidth,h=eqCanvas.clientHeight; const pos=eqPointerPos(e);
+  const band = EQ_BANDS[eqDragIdx];
+  band.gain = Math.max(GAIN_MIN, Math.min(GAIN_MAX, yToGain(pos.y,h)));
+  if(band.type==='peaking'){ band.freq = Math.max(FREQ_MIN, Math.min(FREQ_MAX, xToFreq(Math.max(0,Math.min(w,pos.x)),w))); }
+  applyEQBand(eqDragIdx); drawEQ();
+},{passive:true});
+eqCanvas.addEventListener('touchend', ()=>{ eqDragIdx=-1; drawEQ(); });
+
+document.getElementById('eqReset').addEventListener('click', ()=>{
+  EQ_BANDS.forEach((b,i)=>{ b.gain=0; applyEQBand(i); });
+  drawEQ();
+});
+
+/* ===================== プリセット（種類・順番・パラメータ・EQを保存） ===================== */
+const BUILTIN_PRESETS = [
+  { id:'clean', label:'クリーン', chain:[
+      {type:'comp', params:{threshold:-20, ratio:3}},
+    ], eq:[0,1,0.5,1,1.5] },
+  { id:'crunch', label:'クランチロック', chain:[
+      {type:'comp', params:{threshold:-22, ratio:3.5}},
+      {type:'drive', params:{gain:35, tone:60, level:65}},
+    ], eq:[2,3,1,2,1] },
+  { id:'lead', label:'リード／ソロ', chain:[
+      {type:'drive', params:{gain:65, tone:50, level:70}},
+      {type:'delay', params:{time:0.28, feedback:30, mix:22}},
+    ], eq:[0,1,3,4,2] },
+  { id:'ambient', label:'アンビエント', chain:[
+      {type:'chorus', params:{rate:0.8, depth:55, mix:45}},
+      {type:'delay', params:{time:0.45, feedback:45, mix:38}},
+      {type:'reverb', params:{size:3.2, mix:50}},
+    ], eq:[1,0,-1,1,2.5] },
+  { id:'keys', label:'キーボードパッド', chain:[
+      {type:'comp', params:{threshold:-18, ratio:2.5}},
+      {type:'phaser', params:{rate:0.4, depth:50, mix:35}},
+      {type:'reverb', params:{size:2, mix:30}},
+    ], eq:[1,0.5,0,1,1.5] },
+  { id:'lofi', label:'ローファイ', chain:[
+      {type:'crush', params:{bits:6, tone:35, mix:80}},
+      {type:'delay', params:{time:0.22, feedback:25, mix:20}},
+    ], eq:[-2,1,-1,-3,-5] },
+];
+
+const USER_KEY = 'effector_user_presets_v1';
+function loadUserPresets(){
+  try{ return JSON.parse(localStorage.getItem(USER_KEY)) || []; }catch(e){ return []; }
+}
+function saveUserPresets(list){
+  try{ localStorage.setItem(USER_KEY, JSON.stringify(list)); }catch(e){}
+}
+let userPresets = loadUserPresets();
+let activePresetId = null;
+
+function captureCurrentState(label){
+  return {
+    id: 'u'+Date.now(),
+    label,
+    user: true,
+    chain: chain.map(inst=>({ type:inst.type, params:Object.assign({}, inst.params) })),
+    eq: EQ_BANDS.map(b=>b.gain),
+  };
+}
+
+function allPresets(){ return [...BUILTIN_PRESETS, ...userPresets]; }
+
+const presetList = document.getElementById('presetList');
+const footBar = document.getElementById('footBar');
+
+function renderPresetList(){
+  const presets = allPresets();
+  presetList.innerHTML = presets.map((p,i)=>{
+    const keyLabel = i<9 ? (i+1) : '';
+    const activeCls = p.id===activePresetId ? ' active' : '';
+    const delBtn = p.user ? `<span class="pdel" data-del="${p.id}">✕</span>` : '';
+    return `<button class="preset-btn${activeCls}" data-id="${p.id}">
+      <span class="key">${keyLabel}</span><span class="plabel">${p.label}</span>${delBtn}
+    </button>`;
+  }).join('');
+
+  // フットスイッチバー（最大9個、ライブ中に大きいタップ領域で素早く切替）
+  const slots = 9;
+  let html = '';
+  for(let i=0;i<slots;i++){
+    const p = presets[i];
+    if(p){
+      const activeCls = p.id===activePresetId ? ' active' : '';
+      html += `<div class="footswitch${activeCls}" data-id="${p.id}">
+        <span class="fnum">${i+1}</span>
+        <span class="fcap"></span>
+        <span class="flabel">${p.label}</span>
+      </div>`;
+    } else {
+      html += `<div class="footswitch empty"><span class="fnum">${i+1}</span><span class="fcap"></span><span class="flabel">—</span></div>`;
+    }
+  }
+  footBar.innerHTML = html;
+}
+renderPresetList();
+
+footBar.addEventListener('click', (e)=>{
+  const sw = e.target.closest('.footswitch:not(.empty)');
+  if(!sw) return;
+  const preset = allPresets().find(p=>p.id===sw.dataset.id);
+  if(preset) applyPreset(preset);
+});
+
+function applyPreset(preset){
+  chain = []; Object.keys(builtNodes).forEach(k=>delete builtNodes[k]);
+  preset.chain.forEach(item=>{
+    const tpl = findType(item.type);
+    const id = 'fx'+(instanceSeq++);
+    chain.push({ instanceId:id, type:item.type, bypassed:false, params:Object.assign(defaultParams(tpl), item.params) });
+  });
+  EQ_BANDS.forEach((b,i)=>{ b.gain = preset.eq[i]; applyEQBand(i); });
+  activePresetId = preset.id;
+  rebuildChain(); renderBoard(); drawEQ(); renderPresetList();
+}
+
+presetList.addEventListener('click', (e)=>{
+  const del = e.target.closest('[data-del]');
+  if(del){
+    e.stopPropagation();
+    userPresets = userPresets.filter(p=>p.id!==del.dataset.del);
+    saveUserPresets(userPresets);
+    if(activePresetId===del.dataset.del) activePresetId=null;
+    renderPresetList();
+    return;
+  }
+  const b = e.target.closest('.preset-btn'); if(!b) return;
+  const preset = allPresets().find(p=>p.id===b.dataset.id);
+  if(preset) applyPreset(preset);
+});
+
+document.getElementById('savePresetBtn').addEventListener('click', ()=>{
+  if(chain.length===0){ alert('保存するエフェクトがありません。先にエフェクトを追加してください。'); return; }
+  const name = prompt('プリセット名を入力してください', `マイプリセット ${userPresets.length+1}`);
+  if(!name) return;
+  const preset = captureCurrentState(name);
+  userPresets.push(preset);
+  saveUserPresets(userPresets);
+  activePresetId = preset.id;
+  renderPresetList();
+});
+
+/* 数字キーでプリセット切替、文字キーでバイパス、スペースで電源、矢印で音量 */
+window.addEventListener('keydown', (e)=>{
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+  if(e.code==='Space'){
+    e.preventDefault();
+    powerBtn.click();
+    return;
+  }
+
+  const n = parseInt(e.key, 10);
+  if(!isNaN(n) && n>=1 && n<=9){
+    const presets = allPresets();
+    if(presets[n-1]) applyPreset(presets[n-1]);
+    return;
+  }
+
+  const key = e.key.toLowerCase();
+  const bIdx = BYPASS_KEYS.indexOf(key);
+  if(bIdx>=0 && chain[bIdx]){
+    chain[bIdx].bypassed = !chain[bIdx].bypassed;
+    rebuildChain(); renderBoard();
+    return;
+  }
+
+  const volSlider = document.getElementById('masterVol');
+  if(e.key==='ArrowUp'){ e.preventDefault(); volSlider.value = Math.min(100, +volSlider.value+5); volSlider.dispatchEvent(new Event('input')); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); volSlider.value = Math.max(0, +volSlider.value-5); volSlider.dispatchEvent(new Event('input')); return; }
+});
+
+/* 初期状態 */
+/* ===================== タップテンポ ===================== */
+let tapTimes = [];
+document.getElementById('tapBtn').addEventListener('click', ()=>{
+  const now = performance.now();
+  tapTimes.push(now);
+  tapTimes = tapTimes.filter(t=>now-t<3000);
+  if(tapTimes.length<2) return;
+  const intervals = [];
+  for(let i=1;i<tapTimes.length;i++) intervals.push(tapTimes[i]-tapTimes[i-1]);
+  const avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+  const bpm = Math.round(60000/avg);
+  document.getElementById('bpmReadout').textContent = `BPM: ${bpm}（ディレイ/トレモロに反映）`;
+
+  const quarterSec = 60/bpm;
+  chain.forEach(inst=>{
+    if(inst.type==='delay'){ inst.params.time = Math.max(0.02, Math.min(1, quarterSec)); }
+    if(inst.type==='tremolo'){ inst.params.rate = Math.max(0.5, Math.min(12, bpm/60)); }
+    if(inst.type==='flanger' || inst.type==='phaser'){ inst.params.rate = Math.max(0.05, Math.min(5, bpm/240)); }
+    applyInstanceParams(inst);
+  });
+  renderBoard();
+});
+
+/* ===================== プリセットの書き出し / 読み込み ===================== */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const data = {
+    chain: chain.map(inst=>({ type:inst.type, params:Object.assign({}, inst.params) })),
+    eq: EQ_BANDS.map(b=>b.gain),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `effector-preset-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+const importFile = document.getElementById('importFile');
+document.getElementById('importBtn').addEventListener('click', ()=> importFile.click());
+importFile.addEventListener('change', (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data.chain || !data.eq) throw new Error('invalid');
+      applyPreset({ id:'imported', chain:data.chain, eq:data.eq });
+    }catch(err){ alert('読み込みに失敗しました。ファイルが壊れているか形式が違います。'); }
+  };
+  reader.readAsText(file);
+  importFile.value = '';
+});
+
+addEffect('comp');
+drawEQ();
+</script>
+</body>
+</html>
