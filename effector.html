@@ -959,6 +959,10 @@ powerBtn.addEventListener('click', async ()=>{
     const sourceType = document.getElementById('inputSource').value;
 
     if(sourceType==='tab'){
+      if(!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function'){
+        statusLine.textContent = 'このブラウザはタブ・画面の音声取得に対応していません（Chrome/Edgeのデスクトップ版をお試しください）';
+        return;
+      }
       mediaStream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true });
       const audioTracks = mediaStream.getAudioTracks();
       if(audioTracks.length===0){
@@ -977,6 +981,7 @@ powerBtn.addEventListener('click', async ()=>{
     }
 
     audioCtx = new (window.AudioContext||window.webkitAudioContext)({ latencyHint:'interactive' });
+    if(audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(e){} }
     sourceNode = audioCtx.createMediaStreamSource(mediaStream);
     inputTrim = audioCtx.createGain(); inputTrim.gain.value = document.getElementById('inputTrimSlider').value/100;
     sourceNode.connect(inputTrim);
